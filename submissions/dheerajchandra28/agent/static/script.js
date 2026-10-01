@@ -29,32 +29,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let selectedFile = null;
 
-    // Simulate Barcode Scan (Auto-fill)
+    // Real Barcode Scanner
+    let html5QrcodeScanner = null;
+    const readerDiv = document.getElementById('reader');
+
     scanBarcodeBtn.addEventListener('click', () => {
-        scanBarcodeBtn.innerHTML = '<span class="icon">🔄</span> Fetching...';
-        setTimeout(() => {
-            orderLines.innerHTML = `
-                <div class="order-line">
-                    <input type="text" class="sku-input" placeholder="e.g. SKU-NAME" value="BLUE-TOWEL">
-                    <input type="number" class="qty-input" placeholder="Qty" value="1" min="1">
-                    <button class="remove-btn" onclick="this.parentElement.remove()">✕</button>
-                </div>
-                <div class="order-line">
-                    <input type="text" class="sku-input" placeholder="e.g. SKU-NAME" value="RED-MUG">
-                    <input type="number" class="qty-input" placeholder="Qty" value="1" min="1">
-                    <button class="remove-btn" onclick="this.parentElement.remove()">✕</button>
-                </div>
-                <div class="order-line">
-                    <input type="text" class="sku-input" placeholder="e.g. SKU-NAME" value="YELLOW-NOTEBOOK">
-                    <input type="number" class="qty-input" placeholder="Qty" value="1" min="1">
-                    <button class="remove-btn" onclick="this.parentElement.remove()">✕</button>
-                </div>
+        if (html5QrcodeScanner) {
+            // Already active, so stop it
+            html5QrcodeScanner.clear();
+            html5QrcodeScanner = null;
+            readerDiv.style.display = 'none';
+            scanBarcodeBtn.innerHTML = '<span class="icon">🔍</span> Scan Order Barcode';
+            return;
+        }
+
+        // Start Scanner
+        readerDiv.style.display = 'block';
+        scanBarcodeBtn.innerHTML = '<span class="icon">⏹️</span> Stop Scanner';
+        
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 100} }, false);
+        
+        html5QrcodeScanner.render((decodedText, decodedResult) => {
+            // Success
+            html5QrcodeScanner.clear();
+            html5QrcodeScanner = null;
+            readerDiv.style.display = 'none';
+            scanBarcodeBtn.innerHTML = '<span class="icon">✅</span> ' + decodedText + ' Added';
+            
+            // Add the scanned SKU
+            const line = document.createElement('div');
+            line.className = 'order-line';
+            line.innerHTML = `
+                <input type="text" class="sku-input" placeholder="e.g. SKU-NAME" value="${decodedText.replace('SKU: ', '').trim()}">
+                <input type="number" class="qty-input" placeholder="Qty" value="1" min="1">
+                <button class="remove-btn" onclick="this.parentElement.remove()">✕</button>
             `;
-            scanBarcodeBtn.innerHTML = '<span class="icon">✅</span> Order #8921 Loaded';
+            orderLines.appendChild(line);
+
             setTimeout(() => {
                 scanBarcodeBtn.innerHTML = '<span class="icon">🔍</span> Scan Order Barcode';
-            }, 3000);
-        }, 800);
+            }, 2000);
+        }, (error) => {
+            // Ignore ongoing errors while scanning
+        });
     });
 
     // Toggle Live Camera
